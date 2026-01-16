@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <title>FOL.E – Chat Real</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; background:#f9fafb; padding:20px; }
+    .box { max-width:500px; margin:auto; background:white; padding:20px; border-radius:10px; }
+    input, button { width:100%; padding:10px; margin-top:10px; }
+    #chat { display:none; }
+    #messages { height:300px; overflow-y:auto; border:1px solid #ddd; padding:10px; }
+    .msg { margin-bottom:8px; }
+  </style>
+</head>
+<body>
+
+<div class="box" id="login">
+  <h2>Hyr / Regjistrohu</h2>
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Hyr</button>
+  <p id="error" style="color:red;"></p>
+</div>
+
+<div class="box" id="chat">
+  <h2>Chat Mësimor</h2>
+  <div id="messages"></div>
+  <input id="messageInput" placeholder="Shkruaj mesazh...">
+  <button onclick="sendMessage()">Dërgo</button>
+  <button onclick="logout()">Dil</button>
+</div>
+
+<script>
+  // 🔥 Firebase Config (i yti)
+  const firebaseConfig = {
+    apiKey: "AIzaSyD1TRiz76fI2va46LlrMo6KMnHUjKHaxBM",
+    authDomain: "fole-c2b42.firebaseapp.com",
+    projectId: "fole-c2b42",
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  function login() {
+    const email = email.value;
+    const password = password.value;
+
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(() =>
+        auth.createUserWithEmailAndPassword(email, password)
+      )
+      .catch(err => error.innerText = err.message);
+  }
+
+  function logout() {
+    auth.signOut();
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      login.style.display = "none";
+      chat.style.display = "block";
+      listenMessages();
+    } else {
+      login.style.display = "block";
+      chat.style.display = "none";
+    }
+  });
+
+  function sendMessage() {
+    const text = messageInput.value;
+    if (!text) return;
+
+    db.collection("messages").add({
+      text,
+      user: auth.currentUser.email,
+      created: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    messageInput.value = "";
+  }
+
+  function listenMessages() {
+    db.collection("messages").orderBy("created")
+      .onSnapshot(snapshot => {
+        messages.innerHTML = "";
+        snapshot.forEach(doc => {
+          const m = doc.data();
+          messages.innerHTML += `<div class="msg"><b>${m.user}</b>: ${m.text}</div>`;
+        });
+      });
+  }
+</script>
+
+</body>
+</html>
